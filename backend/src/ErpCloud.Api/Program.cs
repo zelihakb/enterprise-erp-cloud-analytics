@@ -14,6 +14,8 @@ app.MapPost("/api/purchase-requests", (PurchaseRequest request) =>
     return Results.Created("/api/purchase-requests", request);
 });
 
+app.MapGet("/api/purchase-requests/count", () => purchaseRequests.Count);
+
 app.Run();
 
 record PurchaseRequest(int Id, string ProductName, int Quantity);
