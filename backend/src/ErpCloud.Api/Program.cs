@@ -1,5 +1,5 @@
-using ErpCloud.Api.Models;
 using ErpCloud.Api.Data;
+using ErpCloud.Api.Models;
 using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("ErpDatabase")
@@ -9,12 +9,10 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
     options.UseSqlServer(connectionString));
 var app = builder.Build();
 
-var purchaseRequests = new List<PurchaseRequest>();
-
 app.MapGet("/health", () => "ERP API is running");
-
-app.MapGet("/api/purchase-requests", () => purchaseRequests);
-app.MapPost("/api/purchase-requests", (PurchaseRequest request) =>
+app.MapGet("/api/purchase-requests", async (ErpDbContext db) =>
+    await db.PurchaseRequests.AsNoTracking().ToListAsync());
+app.MapPost("/api/purchase-requests", async (PurchaseRequest request, ErpDbContext db) =>
 {
     if (request.Id <= 0)
     {
@@ -40,7 +38,7 @@ app.MapPost("/api/purchase-requests", (PurchaseRequest request) =>
         });
     }
 
-    if (purchaseRequests.Any(r => r.Id == request.Id))
+    if (await db.PurchaseRequests.AnyAsync(r => r.Id == request.Id))
     {
         return Results.Conflict(new
         {
@@ -48,17 +46,20 @@ app.MapPost("/api/purchase-requests", (PurchaseRequest request) =>
         });
     }
 
-    purchaseRequests.Add(request);
-
+    db.PurchaseRequests.Add(request);
+    await db.SaveChangesAsync();
     return Results.Created(
         $"/api/purchase-requests/{request.Id}",
         request
     );
 });
-app.MapGet("/api/purchase-requests/count", () => purchaseRequests.Count);
-app.MapGet("/api/purchase-requests/{id:int}", (int id) =>
+app.MapGet("/api/purchase-requests/count", async (ErpDbContext db) =>
+    await db.PurchaseRequests.CountAsync());
+app.MapGet("/api/purchase-requests/{id:int}", async (int id, ErpDbContext db) =>
 {
-    var request = purchaseRequests.FirstOrDefault(r => r.Id == id);
+    var request = await db.PurchaseRequests
+    .AsNoTracking()
+    .FirstOrDefaultAsync(r => r.Id == id);
 
     if (request is null)
     {
