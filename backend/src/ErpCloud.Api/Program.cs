@@ -1,5 +1,12 @@
 using ErpCloud.Api.Models;
+using ErpCloud.Api.Data;
+using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("ErpDatabase")
+    ?? throw new InvalidOperationException("Database connection string is missing.");
+
+builder.Services.AddDbContext<ErpDbContext>(options =>
+    options.UseSqlServer(connectionString));
 var app = builder.Build();
 
 var purchaseRequests = new List<PurchaseRequest>();
