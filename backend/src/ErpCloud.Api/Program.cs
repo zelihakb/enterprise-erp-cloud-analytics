@@ -1,6 +1,7 @@
 using ErpCloud.Api.Data;
 using ErpCloud.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using ErpCloud.Api.Validation;
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("ErpDatabase")
     ?? throw new InvalidOperationException("Database connection string is missing.");
@@ -22,22 +23,13 @@ app.MapPost("/api/purchase-requests", async (PurchaseRequest request, ErpDbConte
         });
     }
 
-    if (string.IsNullOrWhiteSpace(request.ProductName))
-    {
-        return Results.BadRequest(new
-        {
-            error = "Product name cannot be empty."
-        });
-    }
+    var validationError = PurchaseRequestValidator.Validate(
+    request.ProductName,
+    request.Quantity
+);
 
-    if (request.Quantity <= 0)
-    {
-        return Results.BadRequest(new
-        {
-            error = "Quantity must be greater than zero."
-        });
-    }
-
+    if (validationError is not null)
+        return Results.BadRequest(new { error = validationError });
     if (await db.PurchaseRequests.AnyAsync(r => r.Id == request.Id))
     {
         return Results.Conflict(new
@@ -69,3 +61,4 @@ app.MapGet("/api/purchase-requests/{id:int}", async (int id, ErpDbContext db) =>
     return Results.Ok(request);
 });
 app.Run();
+public partial class Program { }
